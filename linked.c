@@ -37,13 +37,13 @@ void *malloc(size_t mem_size)
 	char errstr[ERR_BUF];
 	struct heap_data *h = kmalloc(sizeof heap_data, GFP_KERNEL);
 	if (h == NULL) {
-		strncpy(errstr,"Couldn't allocate list node in ker");
+		strncpy(errstr,"Couldn't allocate list node in ker",ERR_BUF);
 		goto err;
 	}
 
 	int addr = sbrk(mem_size);
 	if (addr == -1) {
-		strncpy(errstr,"Couldn't increase heap size");
+		strncpy(errstr,"Couldn't increase heap size",ERR_BUF);
 		goto freeh:
 		//TODO: Handle error: unallocate h*;
 	}
