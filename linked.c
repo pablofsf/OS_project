@@ -18,25 +18,59 @@
 
 #include "linked.h"
 #include <linux/list.h>
+#include <errno.h>
 
+//This might also have to be place inside kernel memory
+//That would mean that some initialization has to be done in malloc
 static LIST_HEAD(heap_list);
+static heap_size;
+extern edata;
+extern errno;
+
+static void error(const char str)
+{
+	perror(str);
+}
 
 void *malloc(size_t mem_size)
 {
+	char errstr[ERR_BUF];
 	struct heap_data *h = kmalloc(sizeof heap_data, GFP_KERNEL);
-	h->addr = ; //TODO: Here is where sbrk has to be used
+	if (h == NULL) {
+		strncpy(errstr,"Couldn't allocate list node in ker");
+		goto err;
+	}
+
+	int addr = sbrk(mem_size);
+	if (addr == -1) {
+		strncpy(errstr,"Couldn't increase heap size");
+		goto freeh:
+		//TODO: Handle error: unallocate h*;
+	}
+	heap_size += mem_size;
+	h->addr = (void*) addr; //TODO: Here is where sbrk has to be used
 	h->size = mem_size;
 	INIT_LIST_HEAD(&h->list);
 
 	list_add_tail(&h->list,&heap_list);
+	return h->addr;
+
+freeh:
+	kfree(h);
+err:
+	error(errstr);
+	return NULL;
 }
 
 static void free_heap(struct heap_data *data)
 {
+	heap_size -= data->size;
 	//TOCHECK: If the element is the last element in the list, then we can shrink
 	if (heap_list.prev == data->list) {
-		//TODO: Shrink! Play with sbrk again
-	} 
+		int addr = sbrk(0);
+		sbrk(heap_size + &edata - addr);
+	}
+	
 	list_del(&data->list);
 	kfree(data);
 }
@@ -51,8 +85,6 @@ void free(void *addr)
 				free_heap(data);
 			}	
 		}
-		return;
-	} else {
-		return;
 	}
+	return;
 }

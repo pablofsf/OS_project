@@ -31,4 +31,6 @@ struct heap_data {
 	struct list_head list;
 };
 
+#define ERR_BUF 1024
+
 #endif //__LINKED_H__
