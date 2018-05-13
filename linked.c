@@ -35,28 +35,32 @@ static void error(const char str)
 void *malloc(size_t mem_size)
 {
 	char errstr[ERR_BUF];
-	struct heap_data *h = kmalloc(sizeof heap_data, GFP_KERNEL);
-	if (h == NULL) {
-		strncpy(errstr,"Couldn't allocate list node in ker",ERR_BUF);
+	int node_addr,data_addr;
+	struct heap_data *h;
+	//TODO: Allocate list head somewhere
+	
+	node_addr = sbrk(sizeof heap_data);
+	if (node_addr == -1) {
+		strncpy(errstr,"Couldn't allocate list node",ERR_BUF);
 		goto err;
 	}
+	h = (struct heap_data*) list_addr;
 
-	int addr = sbrk(mem_size);
-	if (addr == -1) {
-		strncpy(errstr,"Couldn't increase heap size",ERR_BUF);
+	data_addr = sbrk(mem_size);
+	if (data_addr == -1) {
+		strncpy(errstr,"Couldn't increase heap size for data allocation",ERR_BUF);
 		goto freeh:
-		//TODO: Handle error: unallocate h*;
 	}
-	heap_size += mem_size;
-	h->addr = (void*) addr; //TODO: Here is where sbrk has to be used
+	heap_size += mem_size + sizeof(heap_data);
+	h->addr = (void*) addr;
 	h->size = mem_size;
-	INIT_LIST_HEAD(&h->list);
+	INIT_LIST_HEAD(&h->list);//TODO: replace 
 
-	list_add_tail(&h->list,&heap_list);
+	list_add_tail(&h->list,&heap_list);//TODO: replace
 	return h->addr;
 
 freeh:
-	kfree(h);
+	sbrk(- sizeof heap_data);
 err:
 	error(errstr);
 	return NULL;
@@ -64,8 +68,9 @@ err:
 
 static void free_heap(struct heap_data *data)
 {
-	heap_size -= data->size;
-	//TOCHECK: If the element is the last element in the list, then we can shrink
+	heap_size -= (data->size + sizeof(heap_data));
+	
+	//TODO: If the element is the last element in the list, then we can shrink
 	if (heap_list.prev == data->list) {
 		int addr = sbrk(0);
 		sbrk(heap_size + &edata - addr);
