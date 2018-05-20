@@ -17,22 +17,47 @@
 ************************************************************************************/
 
 #include "linked.h"
-#include <linux/list.h>
 #include <errno.h>
 
 //This might also have to be place inside kernel memory
 //That would mean that some initialization has to be done in malloc
 static LIST_HEAD(heap_list);
-static heap_size;
+static struct heap_data* head = NULL;
 extern edata;
 extern errno;
+
+struct heap_data *remove(struct heap_data **head, void *val){
+	struct heap_data *current = *head;
+	struct heap_data *temp = NULL;
+
+	if (*head->next == NULL || *head->addr == val)
+		return head;
+  
+	while(current->next->addr != val){
+		current = current->next;
+	}
+
+	temp = current->next;
+	current->next = temp->next;
+
+	return &temp;
+}
+
+void addlast(struct heap_data *head, struct heap_data *val){
+	struct heap_data *current = head;
+	while(current->next != NULL){
+		current = current-> next;
+	}
+
+	current->next = val;
+}
 
 static void error(const char str)
 {
 	perror(str);
 }
 
-void *malloc(size_t mem_size)
+void* malloc(size_t mem_size)
 {
 	char errstr[ERR_BUF];
 	int node_addr,data_addr;
@@ -44,7 +69,7 @@ void *malloc(size_t mem_size)
 		strncpy(errstr,"Couldn't allocate list node",ERR_BUF);
 		goto err;
 	}
-	h = (struct heap_data*) list_addr;
+	h = (struct heap_data*) node_addr;
 
 	data_addr = sbrk(mem_size);
 	if (data_addr == -1) {
@@ -54,9 +79,13 @@ void *malloc(size_t mem_size)
 	heap_size += mem_size + sizeof(heap_data);
 	h->addr = (void*) addr;
 	h->size = mem_size;
-	INIT_LIST_HEAD(&h->list);//TODO: replace 
-
-	list_add_tail(&h->list,&heap_list);//TODO: replace
+	h->next = NULL;
+	
+	if (head != NULL)
+		addlast(head,h);
+	else
+		head = h;
+	
 	return h->addr;
 
 freeh:
@@ -66,30 +95,24 @@ err:
 	return NULL;
 }
 
-static void free_heap(struct heap_data *data)
-{
-	heap_size -= (data->size + sizeof(heap_data));
-	
-	//TODO: If the element is the last element in the list, then we can shrink
-	if (heap_list.prev == data->list) {
-		int addr = sbrk(0);
-		sbrk(heap_size + &edata - addr);
-	}
-	
-	list_del(&data->list);
-	kfree(data);
-}
-
 void free(void *addr)
 {
 	if (addr) {
-		struct heap_data *data, *next;
-
-		list_for_each_entry_save(data,next,&heap_list,list) {
-			if (data->addr == addr) {
-				free_heap(data);
-			}	
-		}
+		struct heap_data **h = remove(&head,addr);
 	}
+
+	heap_size -= (*h->size + sizeof(heap_data));
+
+	if (*h->next == NULL) {
+		if (*h == head)
+			*h = NULL;
+		int addr = sbrk(0);
+		sbrk(heap_size + &edata - addr);
+		return;
+	}
+
+	if (*h == head)
+		head = *h->next;
+
 	return;
 }

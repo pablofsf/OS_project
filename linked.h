@@ -19,17 +19,19 @@
 #ifndef __LINKED_H__
 #define __LINKED_H__
 
-#include <linux/list.h>
+#include <unistd.h>
 
-void *malloc(size_t);
+void *malloc(size_t mem_size);
 void free(void *);
-static void free_heap(struct heap_data *);
 
 struct heap_data {
 	void *addr;
 	size_t size;
-	struct list_head list;
+	struct heap_data *next;
 };
+
+struct heap_data* remove(struct heap_data **head, void *val);
+void addlast(heap_data *head, heap_data *val);
 
 #define ERR_BUF 1024
 
