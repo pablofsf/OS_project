@@ -2,21 +2,11 @@
 #include <linux/list.h>
 #include <errno.h>
 
-void addlast(listnode_t *head, int val){
-  listnode_t *current = head;
-    while(current->next != NULL){
-      current = current-> next;
-    }
 
-  current->next = malloc(sizeof(listnode_t));
-  current->next->val = val;
-  current->next->next = NULL;
-
-}
 
 void addfirst(listnode_t **head, int val){
   listnode_t *new_head;
-  new_head = malloc(sizeof(listnode_t));
+  new_head =  malloc(sizeof(listnode_t));
 
 
   new_head->val = val;
@@ -25,11 +15,11 @@ void addfirst(listnode_t **head, int val){
 
 }
 
-void removelast(listnode_t *head){
+void removelast(heap_data *head){
   if(head->next == NULL){
-    free(head);
+    return;
   }
-  listnode_t *current = head;
+  heap_data *current = head;
   while(current->next->next != NULL){
     current = current->next;
 
@@ -52,25 +42,4 @@ void removefirst(listnode_t **head){
 
 }
 
-int remove(listnode_t **head, int val){
-  int i = 0;
-  listnode_t *current = *head;
-  listnode_t *temp = NULL;
 
-  if(val == 0){
-    return 0;
-  }
-
-  for(i = 0; i < val-1; i++){
-    if(current->next == NULL){
-      return 0;
-    }
-
-    current = current->next;
-
-  }
-  temp = current->next;
-  current->next = temp->next;
-  free(temp);
-  return 0;
-}

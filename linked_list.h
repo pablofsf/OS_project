@@ -9,5 +9,5 @@ int remove(listnode_t *head, int val);
 
 typedef struct listnode {
   int val;
-  struct node *next;
+  struct listnode *next;
 } listnode_t;
