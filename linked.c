@@ -18,21 +18,23 @@
 
 #include "linked.h"
 #include <errno.h>
+#include <string.h>
+#include <stdio.h>
 
 //This might also have to be place inside kernel memory
 //That would mean that some initialization has to be done in malloc
-static LIST_HEAD(heap_list);
 static struct heap_data* head = NULL;
-extern edata;
+static unsigned int heap_size;
+extern void* edata;
 extern errno;
 
-struct heap_data *remove(struct heap_data **head, void *val){
+struct heap_data *remove_list_el(struct heap_data **head, void *val){
 	struct heap_data *current = *head;
 	struct heap_data *temp = NULL;
 
-	if (*head->next == NULL || *head->addr == val)
+	if ((*head)->next == NULL || (*head)->addr == val)
 		return head;
-  
+
 	while(current->next->addr != val){
 		current = current->next;
 	}
@@ -40,7 +42,7 @@ struct heap_data *remove(struct heap_data **head, void *val){
 	temp = current->next;
 	current->next = temp->next;
 
-	return &temp;
+	return temp;
 }
 
 void addlast(struct heap_data *head, struct heap_data *val){
@@ -52,19 +54,20 @@ void addlast(struct heap_data *head, struct heap_data *val){
 	current->next = val;
 }
 
-static void error(const char str)
+static void error(const char *str)
 {
 	perror(str);
 }
 
 void* malloc(size_t mem_size)
 {
+	//printf("We got into our malloc, hooray!\n");
 	char errstr[ERR_BUF];
-	int node_addr,data_addr;
+	void *node_addr, *data_addr;
 	struct heap_data *h;
 	//TODO: Allocate list head somewhere
-	
-	node_addr = sbrk(sizeof heap_data);
+
+	node_addr = sbrk(sizeof(struct heap_data));
 	if (node_addr == -1) {
 		strncpy(errstr,"Couldn't allocate list node",ERR_BUF);
 		goto err;
@@ -74,22 +77,22 @@ void* malloc(size_t mem_size)
 	data_addr = sbrk(mem_size);
 	if (data_addr == -1) {
 		strncpy(errstr,"Couldn't increase heap size for data allocation",ERR_BUF);
-		goto freeh:
+		goto freeh;
 	}
-	heap_size += mem_size + sizeof(heap_data);
-	h->addr = (void*) addr;
+	heap_size += mem_size + sizeof(struct heap_data);
+	h->addr = (void*) data_addr;
 	h->size = mem_size;
 	h->next = NULL;
-	
+
 	if (head != NULL)
 		addlast(head,h);
 	else
 		head = h;
-	
+
 	return h->addr;
 
 freeh:
-	sbrk(- sizeof heap_data);
+	sbrk(- sizeof(struct heap_data));
 err:
 	error(errstr);
 	return NULL;
@@ -97,22 +100,24 @@ err:
 
 void free(void *addr)
 {
+	struct heap_data *h;
+
 	if (addr) {
-		struct heap_data **h = remove(&head,addr);
+	        h = remove_list_el(&head,addr);
 	}
 
-	heap_size -= (*h->size + sizeof(heap_data));
+	heap_size -= (h->size + sizeof(struct heap_data));
 
-	if (*h->next == NULL) {
-		if (*h == head)
-			*h = NULL;
-		int addr = sbrk(0);
-		sbrk(heap_size + &edata - addr);
+	if (h->next == NULL) {
+		if (h == head)
+			head = NULL;
+		void *addr = sbrk(0);
+		sbrk(heap_size + edata - addr);
 		return;
 	}
 
-	if (*h == head)
-		head = *h->next;
+	if (h == head)
+		head = h->next;
 
 	return;
 }

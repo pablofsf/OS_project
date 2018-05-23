@@ -30,8 +30,8 @@ struct heap_data {
 	struct heap_data *next;
 };
 
-struct heap_data* remove(struct heap_data **head, void *val);
-void addlast(heap_data *head, heap_data *val);
+struct heap_data* remove_list_el(struct heap_data **head, void *val);
+void addlast(struct heap_data *head, struct heap_data *val);
 
 #define ERR_BUF 1024
 
