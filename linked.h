@@ -22,6 +22,8 @@
 #include <unistd.h>
 
 void *malloc(size_t mem_size);
+void *calloc(size_t nmemb, size_t size);
+void *realloc(void *ptr, size_t size);
 void free(void *);
 
 struct heap_data {
@@ -29,9 +31,6 @@ struct heap_data {
 	size_t size;
 	struct heap_data *next;
 };
-
-struct heap_data* remove_list_el(struct heap_data **head, void *val);
-void addlast(struct heap_data *head, struct heap_data *val);
 
 #define ERR_BUF 1024
 
