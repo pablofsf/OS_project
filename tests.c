@@ -22,22 +22,20 @@
 int main()
 {
 	int val = 5;
-	int *arr1, *arr2;
+	int *arr1, *arr2, *arr3;
 	arr1 = (int *) malloc(val * sizeof(int));
-	arr2 = (int *) malloc(val * sizeof(int));
-
+	arr2 = (int *) malloc((val+1) * sizeof(int));
+	arr3 = (int *) malloc((val+2) * sizeof(int));
+	
 	for (int i = 0; i < val; i++) {
 		arr1[i] = i;
 		arr2[i] = 2 * i;
+		arr3[i+1] = 3 * i;
 	}
 
-	for (int i = 0; i < val; i++) {
-        printf("%i, %i \n",arr1[i], arr2[i]);
-	}
-	printf("\n");
-
-	free(arr1);
 	free(arr2);
+	free(arr3);
+	free(arr1);
 
 	return 0;
 }

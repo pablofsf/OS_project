@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -pedantic
+CFLAGS = -Wall  -O2 -pedantic -g
 OUT = test
 OBJS = linked.o tests.o
 
