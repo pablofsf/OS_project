@@ -25,26 +25,35 @@
 #include <fcntl.h>
 
 
-//#define DEBUG
-//This might also have to be place inside kernel memory
-//That would mean that some initialization has to be done in malloc
+//#define __DEBUG__
 static struct heap_data* head = NULL;
 static struct heap_data* tail = NULL;
 static struct heap_data* heap_start;
 extern errno;
 
-#ifdef DEBUG
+#ifdef __DEBUG__
 static int count;
 
-static void print_list()
+void print_list()
 {
-	fprintf(stderr,"We have %i nodes\n",count);
+	struct heap_data *h;
+	int i = 0;
+	
+	fprintf(stderr,"\nWe have %i nodes\n",count);
+	fprintf(stderr,"head: %p, tail: %p\n",(void *) head,(void *) tail);
+	h = head;
+	while (h) {
+		fprintf(stderr,"List node count: %i\n",i);
+		fprintf(stderr,"list node: %p, ptr: %p, size: %lu, next: %p\n",
+			(void *) h,h->addr,h->size,(void *) h->next);
+		h = h->next;
+		i++;
+	}
 }
 #endif
 
 static struct heap_data *get_ptr(void *ptr)
 {
-	//Consideration: The ptr always exists in mem
 	struct heap_data *h = head;
 
 	while (h->addr != ptr) {
@@ -52,7 +61,6 @@ static struct heap_data *get_ptr(void *ptr)
 		if (h == NULL)
 			return NULL;
 	}
-	
 	return h;
 }
 
@@ -93,9 +101,7 @@ static struct heap_data *remove_list_el(void *ptr)
 static void addlast(struct heap_data *val)
 {
 	struct heap_data *current = head;
-#ifdef DEBUG
-	count++;
-#endif
+	
 	while(current->next != NULL) {
 	current = current-> next;
 }
@@ -122,8 +128,8 @@ static void reduce_heap_size()
 		reduce = ((size_t) heap_start) - ((size_t) heap_end);
 		
 	sbrk(reduce);
-#ifdef DEBUG			
-	fprintf(stderr,"We have freed mem, properly? %lu\n",sbrk(0));
+#ifdef __DEBUG__			
+	fprintf(stderr,"We have freed mem, properly? %p\n",sbrk(0));
 //	print_list();
 #endif
 }
@@ -135,22 +141,23 @@ void* malloc(size_t mem_size)
 	void *node_addr, *data_addr;
 	struct heap_data *h;
 
-#ifdef DEBUG
+#ifdef __DEBUG__
 	fprintf(stderr,"Malloc: ");
+	count++;
 #endif
 
-/*	if (!mem_size)
+	if (!mem_size)
 		return NULL;
-*/	
+	
 	node_addr = sbrk(sizeof(struct heap_data));
-	if (node_addr == -1) {
+	if (node_addr == (void *) -1) {
 		strncpy(errstr,"Couldn't allocate list node",ERR_BUF);
 		goto err;
         }
 	h = (struct heap_data*) node_addr;
-
+	
 	data_addr = sbrk(mem_size);
-	if (data_addr == -1) {
+	if (data_addr == (void *) -1) {
 		strncpy(errstr,"Couldn't increase heap size for data allocation",ERR_BUF);
 		goto freeh;
 	}
@@ -166,9 +173,9 @@ void* malloc(size_t mem_size)
 		tail = h;
 		heap_start = h;
 	}
-#ifdef DEBUG	
+#ifdef __DEBUG__	
 //	print_list();
-	fprintf(stderr,"%lu. End is in %lu!, returning %lu\n",mem_size,sbrk(0),h->addr);
+	fprintf(stderr,"%lu. End is in %p!, returning %p\n",mem_size,sbrk(0),h->addr);
 #endif
 	return h->addr;
 
@@ -182,23 +189,23 @@ err:
 void free(void *ptr)
 {
 	struct heap_data *h;
-#ifdef DEBUG		
-	fprintf(stderr,"Free: %lu:",ptr);
+#ifdef __DEBUG__		
+	fprintf(stderr,"Free: %p:",ptr);
+	count--;
 #endif
-	if (ptr) {
-	        h = remove_list_el(ptr);
-		if (h == NULL)
-			return;
-		if (h->next == NULL) {
-			reduce_heap_size();
-#ifdef DEBUG		
-			return;
-#endif			
-		}
+	if (ptr == NULL) {
+		return;
+	}
+	
+	h = remove_list_el(ptr);
+	if (h == NULL)
+		return;
+	if (h->next == NULL) {
+		reduce_heap_size();		
 	}
 
-#ifdef DEBUG	
-	fprintf(stderr,"We are leaving our free, %lu\n",sbrk(0));
+#ifdef __DEBUG__	
+	fprintf(stderr,"We are leaving our free, %p\n",sbrk(0));
 //	print_list();
 #endif
 	return;
@@ -207,12 +214,13 @@ void free(void *ptr)
 void *calloc(size_t nmemb, size_t size)
 {
 	void *ptr;
-#ifdef DEBUG		
+#ifdef __DEBUG__		
 	fprintf(stderr,"Calloc:");
 #endif
 	
 	ptr =  malloc(nmemb*size);
-	bzero(ptr,nmemb*size);
+	if (ptr)
+		memset(ptr,'\0',nmemb*size);
 	return ptr;
 }
 
@@ -221,35 +229,38 @@ void *realloc(void *ptr, size_t size)
 	void *tmp;
 	struct heap_data *h;
 	
-#ifdef DEBUG		
-	fprintf(stderr,"Realloc: %lu, size %lu",ptr,size);
+#ifdef __DEBUG__		
+	fprintf(stderr,"Realloc: %p, size %lu",ptr,size);
+//	print_list();
 #endif
-	if (ptr) {
-		h = get_ptr(ptr);
-		if (h == NULL)
-			return malloc(size);
-		if (size) {
-			if(h->size < size) {
-#ifdef DEBUG
-				fprintf(stderr,"Should reallocate mem\n");
-#endif
-				tmp = malloc(size);
-				memcpy(tmp,ptr,h->size);
-				free(ptr);
-			} else {
-#ifdef DEBUG
-				fprintf(stderr,"Should reduce allocated memory\n");
-#endif
-				h->size = size;
-				tmp = h->addr;
-			}
-			return tmp;
-			
-		} else {
-			free(ptr);
-		}
-	} else {
+	if (ptr == NULL) {
 		return malloc(size);
 	}
+	
+	h = get_ptr(ptr);
+	if (h == NULL)
+		return malloc(size);
+	
+	if (size) {
+		if(h->size < size) {
+#ifdef __DEBUG__
+			fprintf(stderr,"Should reallocate mem\n");
+#endif
+			tmp = malloc(size);
+			memcpy(tmp,ptr,h->size);
+			free(ptr);
+		} else {
+#ifdef __DEBUG__
+			fprintf(stderr,"Should reduce allocated memory\n");
+#endif
+			h->size = size;
+			tmp = h->addr;
+		}
+		return tmp;
+			
+	} else {
+		free(ptr);
+	}
+
 	return NULL;
 }
