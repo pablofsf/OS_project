@@ -48,7 +48,7 @@ static void remove_node(struct heap_data *h,int index)
 
 	current = freelist[index]->next;
 	prev = freelist[index];
-	
+
 	while (current) {
 		if (current == h)
 			break;
@@ -77,23 +77,67 @@ void init(){
 }
 
 void *malloc(size_t size){
-	int i;
-	
+
 	if(head == NULL){
 		init();
 	}
 	if(size > MAX_ALLOC || size < MIN_ALLOC){
 		return NULL;
 	}
-        i = get_index(size);
-	
-	struct heap_data *temphead = freelist[i];
-	if(temphead != NULL){
-		while(temphead->next != NULL && !(temphead->available)){
-			temphead = temphead->next;
+
+	int req = get_index(size);
+
+	int available = req;
+
+	struct heap_data *temphead = freelist[req];
+
+	while(temphead != NULL && available < 13){
+		available++;
+		temphead = freelist[available];
 		}
 
+	if(temphead == NULL){
+		return NULL;
 	}
+
+	while(available > req){
+
+		struct heap_data *parent = freelist[available];
+		freelist[available] = parent->next;
+
+		if(parent->next != NULL){
+			freelist[available]->prev = NULL;
+		}
+
+		available--;
+
+		//find buddy address TODO
+
+		struct heap_data *buddy1 = parent;
+		struct heap_data *buddy2 = //address of parent + size of struct + size of buddy
+
+		buddy1->available = 1;
+		buddy2->available = 1;
+		buddy1->prev = NULL;
+		buddy2->prev = buddy1;
+		buddy1->next = buddy2;
+		buddy2->next = NULL;
+
+		freelist[available] = buddy1;
+
+	}
+
+	struct heap_data *new_node = freelist[available];
+	freelist[available] = freelist[available]->next;
+	new_node->available = 0;
+
+	if(new_node->next != NULL){
+		new_node->next->prev = NULL;
+		new_node->prev = NULL;
+	}
+
+	}
+
 
 }
 
