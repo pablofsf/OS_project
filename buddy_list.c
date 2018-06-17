@@ -91,10 +91,10 @@ void *malloc(size_t size){
 
 	struct heap_data *temphead = freelist[req];
 
-	while(temphead != NULL && available < 13){
+	while(temphead == NULL && available < 13){
 		available++;
 		temphead = freelist[available];
-		}
+	}
 
 	if(temphead == NULL){
 		return NULL;
@@ -114,31 +114,29 @@ void *malloc(size_t size){
 		//find buddy address TODO
 
 		struct heap_data *buddy1 = parent;
-		struct heap_data *buddy2 = //address of parent + size of struct + size of buddy
+		struct heap_data *buddy2 = ((void *) parent) + (parent->size >> 1);
 
 		buddy1->available = 1;
 		buddy2->available = 1;
+		buddy1->size = buddy2->size = (1 << available) + MIN_ALLOC;
 		buddy1->prev = NULL;
 		buddy2->prev = buddy1;
 		buddy1->next = buddy2;
-		buddy2->next = NULL;
+		buddy2->next = freelist[available];
 
-		freelist[available] = buddy1;
+  		freelist[available] = buddy1;
 
 	}
 
 	struct heap_data *new_node = freelist[available];
 	freelist[available] = freelist[available]->next;
-	new_node->available = 0;
 
 	if(new_node->next != NULL){
 		new_node->next->prev = NULL;
 		new_node->prev = NULL;
 	}
 
-	}
-
-
+	return ((void *) new_node) + sizeof(struct heap_data);
 }
 
 static void *contiguous(struct heap_data *h,size_t size)
@@ -157,11 +155,11 @@ static void *contiguous(struct heap_data *h,size_t size)
 static void free_block(struct heap_data *h,int index)
 {
 	struct heap_data *aux;
-	h->available = 1;
 
-	aux = freelist[index];
+	//First block is the one that has just been added
+	aux = freelist[index]->next;
 	while (aux) {
-		if (aux == contiguous(h,h->size) && aux->available) {
+		if (aux == contiguous(h,h->size)) {
 			merge(aux,h,index);
 			return;
 		}
@@ -185,8 +183,7 @@ static void merge(struct heap_data *h1,struct heap_data *h2,int index)
 
 	if (base->size != MAX_ALLOC)
 		free_block(base,index + 1);
-	else
-		base->available = 1;
+
 	return;
 }
 
@@ -195,5 +192,7 @@ void free(void *ptr)
 	struct heap_data *h = (struct heap_data *) (ptr - SIZE_HEAP_DATA);
 	int index = get_index(h->size);
 
+	h->next = freelist[index];
+	freelist[index] = h;
 	free_block(h,index);
 }
