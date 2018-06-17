@@ -17,7 +17,7 @@ static void *startmem;
 static int get_index(size_t size)
 {
 	int i;
-     	for(i = DATA_SIZES - 1; i >= 0; i--){
+    for(i = DATA_SIZES - 1; i >= 0; i--){
 		if(size >= (1 << (i + 3))){
 			break;
 		}
@@ -112,7 +112,7 @@ void *malloc(size_t size){
 		struct heap_data *buddy1 = parent;
 		struct heap_data *buddy2 = ((size_t) parent) + (parent->size >> 1);
 
-		buddy1->size = buddy2->size = (1 << available) + MIN_ALLOC;
+		buddy1->size = buddy2->size = () + MIN_ALLOC;
 		buddy1->prev = NULL;
 		buddy2->prev = buddy1;
 		buddy1->next = buddy2;
