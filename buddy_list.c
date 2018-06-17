@@ -129,6 +129,8 @@ void *malloc(size_t size){
 		new_parent->prev = NULL;
 	}
 
+	printlist();
+
 	return (void *) ((size_t) new_parent + sizeof(struct heap_data));
 }
 
@@ -188,4 +190,20 @@ void free(void *ptr)
 	h->next = freelist[index];
 	freelist[index] = h;
 	free_block(h,index);
+}
+
+void printlist(){
+	for(int i = 12; i > 0; i--){
+		if(freelist[i] == NULL){
+			fprintf(stderr, "Not created \n");
+		}else{
+			struct heap_data *temp = freelist[i];
+			while(temp != NULL){
+				fprintf(stderr, "size: %lu ",temp->size);
+				temp = temp->next;
+		}
+	}
+	fprintf(stderr, "\n");
+	}
+
 }
