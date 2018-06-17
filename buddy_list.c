@@ -11,7 +11,7 @@ static void free_block(struct heap_data *h,int index);
 
 
 static struct heap_data* freelist[DATA_SIZES];
-struct heap_data* head = NULL;
+static struct heap_data head;
 static void *startmem;
 
 static int get_index(size_t size)
@@ -65,23 +65,21 @@ void init(){
 		perror(errno);
 	}
 
-	head->addr = startmem;
-	head->size = 0;
-	head->next = NULL;
-	head->prev = NULL;
-	head->data = NULL;
-	head->available = 1;
+	head.size = MAX_ALLOC;
+	head.next = NULL;
+	head.prev = NULL;
 
-	freelist[12] = head;
+	freelist[12] = &head;
 
 }
 
 void *malloc(size_t size){
 
-	if(head == NULL){
+	if(startmem == NULL){
 		init();
 	}
-	if(size > MAX_ALLOC || size < MIN_ALLOC){
+
+	if(size > MAX_ALLOC || size == 0){
 		return NULL;
 	}
 
@@ -111,13 +109,9 @@ void *malloc(size_t size){
 
 		available--;
 
-		//find buddy address TODO
-
 		struct heap_data *buddy1 = parent;
-		struct heap_data *buddy2 = ((void *) parent) + (parent->size >> 1);
+		struct heap_data *buddy2 = ((size_t) parent) + (parent->size >> 1);
 
-		buddy1->available = 1;
-		buddy2->available = 1;
 		buddy1->size = buddy2->size = (1 << available) + MIN_ALLOC;
 		buddy1->prev = NULL;
 		buddy2->prev = buddy1;
@@ -125,18 +119,17 @@ void *malloc(size_t size){
 		buddy2->next = freelist[available];
 
   		freelist[available] = buddy1;
-
 	}
 
-	struct heap_data *new_node = freelist[available];
+	struct heap_data *new_parent = freelist[available];
 	freelist[available] = freelist[available]->next;
 
-	if(new_node->next != NULL){
-		new_node->next->prev = NULL;
-		new_node->prev = NULL;
+	if(new_parent->next != NULL){
+		new_parent->next->prev = NULL;
+		new_parent->prev = NULL;
 	}
 
-	return ((void *) new_node) + sizeof(struct heap_data);
+	return (void *) ((size_t) new_parent + sizeof(struct heap_data));
 }
 
 static void *contiguous(struct heap_data *h,size_t size)
