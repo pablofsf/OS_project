@@ -4,13 +4,13 @@
 #include <string.h>
 
 #define MIN_ALLOC_BITS 5
-#define MAX_ALLOC_BITS 20
+#define MAX_ALLOC_BITS 24
 #define MIN_ALLOC ((size_t)1 << MIN_ALLOC_BITS)
 #define MAX_ALLOC ((size_t)1 << MAX_ALLOC_BITS)
 #define DATA_SIZES (MAX_ALLOC_BITS - MIN_ALLOC_BITS + 1)
 #define SIZE_HEAP_DATA (sizeof(struct heap_data))
 
-#define ABUG
+//#define ABUG
 static void merge(struct heap_data *h1,struct heap_data *h2,int index);
 static void free_block(struct heap_data *h,int index);
 
@@ -28,7 +28,7 @@ static int get_index(size_t size)
 	}
 	return i;
 }
-
+#ifdef ABUG
 static void printlist(){
 	for(int i = DATA_SIZES - 1; i >= 0; i--){
 		if(freelist[i] == NULL){
@@ -47,7 +47,7 @@ static void printlist(){
 	fprintf(stderr, "\n");
 
 }
-
+#endif
 static void add_node(struct heap_data *h,int index)
 {
 	struct heap_data *tmp = freelist[index];
@@ -114,7 +114,6 @@ void *malloc(size_t size){
 
 	struct heap_data *temphead = freelist[req];
 
-//FIX, position of available
 	while(temphead == NULL && available < (DATA_SIZES - 1)){
 		available++;
 		temphead = freelist[available];
@@ -213,7 +212,6 @@ void free(void *ptr)
 #ifdef ABUG
 	fprintf(stderr,"We are in free: %p\n",ptr);
 #endif
-	//Fix, pointer null
 	if (ptr == NULL)
 		return;
 	
@@ -236,8 +234,12 @@ void *calloc(size_t nmemb, size_t size)
 	void *ptr;
 
 	ptr =  malloc(nmemb*size);
-	if (ptr)
-		memset(ptr,'\0',nmemb*size);
+	if (ptr) {
+		for (int i = 0; i < nmemb*size; i++) {
+			*((char *) ptr + i) = '\0';
+		}
+	}
+		
 	return ptr;
 }
 
